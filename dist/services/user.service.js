@@ -210,12 +210,12 @@ const forgotPasswordService = async (email) => {
         <p>Dear ${oldUser.username || oldUser.email},</p>
         <p>We received a request to reset the password for your account.</p>
         <p>Please click the button below to reset your password. This link is valid for <strong>1 Hour</strong>.</p>
-        <a href="http://localhost:3000/api/user/auth/reset-password/${oldUser._id}/${token}" 
+        <a href="https://lms-backend1-q5ah.onrender.com/api/user/auth/reset-password/${oldUser._id}/${token}" 
            style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007BFF; text-decoration: none; border-radius: 5px;">
            Reset Password
         </a>
         <p style="margin-top: 20px;">If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
-        <p><a href="http://localhost:3000/api/user/auth/reset-password/${oldUser._id}/${token}">http://localhost:3000/api/admin/auth/reset-password/${oldUser._id}/${token}</a></p>
+        <p><a href="https://lms-backend1-q5ah.onrender.com/api/user/auth/reset-password/${oldUser._id}/${token}">https://lms-backend1-q5ah.onrender.com/api/admin/auth/reset-password/${oldUser._id}/${token}</a></p>
         <p style="color: #888;">If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
         <p style="font-size: 12px; color: #888;">Sincerely,<br>The [Your Company/App Name] Team</p>
@@ -232,7 +232,7 @@ const forgotPasswordService = async (email) => {
         err.statusCode = 500;
         throw err;
     }
-    const link = `http://localhost:3000/api/user/auth/reset-password/${oldUser._id}/${token}`;
+    const link = `https://lms-backend1-q5ah.onrender.com/api/user/auth/reset-password/${oldUser._id}/${token}`;
     return link;
 };
 exports.forgotPasswordService = forgotPasswordService;

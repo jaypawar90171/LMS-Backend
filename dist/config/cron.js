@@ -9,7 +9,7 @@ const http_1 = __importDefault(require("http"));
 node_cron_1.default.schedule("*/14 * * * *", () => {
     console.log("Running a scheduled health check every 14 minutes...");
     try {
-        const req = http_1.default.get("http://localhost:30000", (res) => {
+        const req = http_1.default.get("https://lms-backend1-q5ah.onrender.com/", (res) => {
             if (res.statusCode === 200) {
                 console.log("Server ping successful (Status: 200)");
             }

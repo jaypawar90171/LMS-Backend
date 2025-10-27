@@ -4,7 +4,7 @@ import http from "http";
 cron.schedule("*/14 * * * *", () => {
   console.log("Running a scheduled health check every 14 minutes...");
   try {
-    const req = http.get("http://localhost:30000", (res) => {
+    const req = http.get("https://lms-backend1-q5ah.onrender.com/", (res) => {
       if (res.statusCode === 200) {
         console.log("Server ping successful (Status: 200)");
       } else {
