@@ -1087,7 +1087,7 @@ const issueItemImmediately = async (
   const item = await InventoryItem.findById(itemId).session(session);
   if (!item) throw new Error("Item not found");
 
-  const user = await User.findById(userId).populate("roles");
+  const user = await User.findById(userId).populate("roles").session(session);
 
   if (!user) {
     const err: any = new Error("User not found.");
@@ -1116,15 +1116,14 @@ const issueItemImmediately = async (
   await item.save({ session });
 
   // Send notification
-  await sendIssueNotification(userId, item.title, dueDate, "immediate");
 
-  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
-  await logActivity(
-    { userId: user.id, name: user.fullName, role: roleNames },
-    "ITEM_ISSUED",
-    { userId: user.id, name: user.fullName, role: roleNames },
-    `${user.fullName} has issued an item ${issuedItem.itemId}`
-  );
+  // const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  // await logActivity(
+  //   { userId: user.id, name: user.fullName, role: roleNames },
+  //   "ITEM_ISSUED",
+  //   { userId: user.id, name: user.fullName, role: roleNames },
+  //   `${user.fullName} has issued an item ${issuedItem.itemId}`
+  // );
 
   return {
     message: "Item issued successfully",
@@ -1132,7 +1131,9 @@ const issueItemImmediately = async (
       _id: issuedItem._id,
       itemTitle: item.title,
       dueDate: issuedItem.dueDate,
+      itemId: issuedItem.itemId,
     },
+    user: user,
     type: "immediate",
   };
 };
@@ -1152,7 +1153,7 @@ const addUserToQueue = async (
     });
   }
 
-  const user = await User.findById(userId).populate("roles");
+  const user = await User.findById(userId).populate("roles").session(session);
 
   if (!user) {
     const err: any = new Error("User not found.");
@@ -1182,20 +1183,25 @@ const addUserToQueue = async (
 
   await queue.save({ session });
 
-  // Send queue position notification
-  await sendQueuePositionNotification(userId, itemId, position);
+  const item = await InventoryItem.findById(itemId).session(session);
+  if (!item) throw new Error("Item not found");
 
-  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
-  await logActivity(
-    { userId: user.id, name: user.fullName, role: roleNames },
-    "USER_ADDED_TO_QUEUE",
-    { userId: user.id, name: user.fullName, role: roleNames },
-    `${user.fullName} has been added to queue for an item ${itemId}`
-  );
+  // Send queue position notification
+  // await sendQueuePositionNotification(userId, itemId, position);
+
+  // const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  // await logActivity(
+  //   { userId: user.id, name: user.fullName, role: roleNames },
+  //   "USER_ADDED_TO_QUEUE",
+  //   { userId: user.id, name: user.fullName, role: roleNames },
+  //   `${user.fullName} has been added to queue for an item ${itemId}`
+  // );
 
   return {
     message: `Item is currently unavailable. You have been added to the queue at position ${position}.`,
     queuePosition: position,
+    user: user,
+    item: item,
     type: "queued",
   };
 };
@@ -1278,9 +1284,10 @@ export const createIssueRequestService = async (
   itemId: string
 ) => {
   const session = await mongoose.startSession();
+  let result: any;
 
   try {
-    const result = await session.withTransaction(async () => {
+    result = await session.withTransaction(async () => {
       const item = await InventoryItem.findById(itemId).session(session);
       if (!item) {
         const err: any = new Error("Item not found");
@@ -1303,6 +1310,37 @@ export const createIssueRequestService = async (
         return await addUserToQueue(userId, itemId, session);
       }
     });
+
+    const { user } = result;
+    const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+    const actor = { userId: user.id, name: user.fullName, role: roleNames };
+
+    if (result.type === "immediate") {
+      await sendIssueNotification(
+        userId,
+        result.issuedItem.itemTitle,
+        result.issuedItem.dueDate,
+        "immediate"
+      );
+      await logActivity(
+        actor,
+        "ITEM_ISSUED",
+        actor,
+        `${user.fullName} has issued an item ${result.issuedItem.itemId}`
+      );
+    } else if (result.type === "queued") {
+      await sendQueuePositionNotification(
+        userId,
+        result.item._id.toString(), 
+        result.queuePosition
+      );
+      await logActivity(
+        actor,
+        "USER_ADDED_TO_QUEUE",
+        actor,
+        `${user.fullName} has been added to queue for an item ${result.item._id}`
+      );
+    }
 
     return result;
   } finally {
