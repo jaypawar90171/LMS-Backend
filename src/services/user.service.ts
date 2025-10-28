@@ -1118,9 +1118,6 @@ const issueItemImmediately = async (
   // Send notification
   await sendIssueNotification(userId, item.title, dueDate, "immediate");
 
-  await session.commitTransaction();
-  session.endSession();
-
   const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
   await logActivity(
     { userId: user.id, name: user.fullName, role: roleNames },
@@ -1145,7 +1142,6 @@ const addUserToQueue = async (
   itemId: string,
   session: mongoose.ClientSession
 ) => {
-  // Find or create queue for the item
   let queue = await Queue.findOne({ itemId }).session(session);
 
   if (!queue) {
@@ -1188,9 +1184,6 @@ const addUserToQueue = async (
 
   // Send queue position notification
   await sendQueuePositionNotification(userId, itemId, position);
-
-  await session.commitTransaction();
-  session.endSession();
 
   const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
   await logActivity(
@@ -1285,34 +1278,35 @@ export const createIssueRequestService = async (
   itemId: string
 ) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
-    const item = await InventoryItem.findById(itemId).session(session);
-    if (!item) {
-      const err: any = new Error("Item not found");
-      err.statusCode = 404;
-      throw err;
-    }
+    const result = await session.withTransaction(async () => {
+      const item = await InventoryItem.findById(itemId).session(session);
+      if (!item) {
+        const err: any = new Error("Item not found");
+        err.statusCode = 404;
+        throw err;
+      }
 
-    const eligibility = await checkUserEligibility(
-      new mongoose.Types.ObjectId(userId)
-    );
-    if (!eligibility.eligible) {
-      const err: any = new Error(eligibility.reason);
-      err.statusCode = 400;
-      throw err;
-    }
+      const eligibility = await checkUserEligibility(
+        new mongoose.Types.ObjectId(userId)
+      );
+      if (!eligibility.eligible) {
+        const err: any = new Error(eligibility.reason);
+        err.statusCode = 400;
+        throw err;
+      }
 
-    if (item.availableCopies > 0 && item.status === "Available") {
-      return await issueItemImmediately(userId, itemId, session);
-    } else {
-      return await addUserToQueue(userId, itemId, session);
-    }
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
+      if (item.availableCopies > 0 && item.status === "Available") {
+        return await issueItemImmediately(userId, itemId, session);
+      } else {
+        return await addUserToQueue(userId, itemId, session);
+      }
+    });
+
+    return result;
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -1625,7 +1619,10 @@ export const getMyDonationsService = async (userId: string) => {
   }
 };
 
-export const withdrawDonationService = async(donationId: string, userId: string) => {
+export const withdrawDonationService = async (
+  donationId: string,
+  userId: string
+) => {
   try {
     const donation = await Donation.findById(donationId);
 
@@ -1634,13 +1631,16 @@ export const withdrawDonationService = async(donationId: string, userId: string)
     }
 
     if (donation.userId.toString() !== userId) {
-      return { success: false, message: "You can only withdraw your own donation requests" };
+      return {
+        success: false,
+        message: "You can only withdraw your own donation requests",
+      };
     }
 
-     if (donation.status !== "Pending") {
-      return { 
-        success: false, 
-        message: `Cannot withdraw donation with status: ${donation.status}. Only pending donations can be withdrawn.` 
+    if (donation.status !== "Pending") {
+      return {
+        success: false,
+        message: `Cannot withdraw donation with status: ${donation.status}. Only pending donations can be withdrawn.`,
       };
     }
 
@@ -1649,13 +1649,13 @@ export const withdrawDonationService = async(donationId: string, userId: string)
     return {
       success: true,
       message: "Donation request withdrawn successfully",
-      withdrawnDonation
+      withdrawnDonation,
     };
   } catch (error) {
     console.error("Error withdrawing donation:", error);
     return { success: false, message: "Internal server error" };
   }
-}
+};
 
 export const getUserNotificationService = async (userId: string) => {
   const notifications = await Notification.find({ recipientId: userId }).sort({
