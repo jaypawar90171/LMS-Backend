@@ -2398,7 +2398,7 @@ export const approveRequestedItemService = async (
                         <h3>Request Details:</h3>
                         <p><strong>Item Name:</strong> ${itemRequest.name}</p>
                         <p><strong>Category:</strong> ${
-                          itemRequest.category
+                          itemRequest.categoryName
                         }</p>
                         <p><strong>Quantity:</strong> ${
                           itemRequest.quantity
@@ -2515,7 +2515,7 @@ export const rejectRequestedItemService = async (
                         <h3>Request Details:</h3>
                         <p><strong>Item Name:</strong> ${itemRequest.name}</p>
                         <p><strong>Category:</strong> ${
-                          itemRequest.category
+                          itemRequest.categoryName
                         }</p>
                         <p><strong>Quantity:</strong> ${
                           itemRequest.quantity
@@ -2623,7 +2623,7 @@ export const deleteRequestedItemService = async (requestId: string) => {
                         <h3>Cancelled Request Details:</h3>
                         <p><strong>Item Name:</strong> ${itemRequest.name}</p>
                         <p><strong>Category:</strong> ${
-                          itemRequest.category
+                          itemRequest.categoryName
                         }</p>
                         <p><strong>Quantity:</strong> ${
                           itemRequest.quantity
