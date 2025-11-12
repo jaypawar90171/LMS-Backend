@@ -738,7 +738,6 @@ export const fetchSpecificItemServive = async (itemId: any) => {
     throw err;
   }
 
-  // Manually populate the category
   if (item.categoryId) {
     const category = await Category.findById(item.categoryId)
       .select("name description")
@@ -746,8 +745,6 @@ export const fetchSpecificItemServive = async (itemId: any) => {
 
     if (category) {
       (item as any).category = category;
-      // Optionally remove the categoryId if you don't need it
-      // delete item.categoryId;
     }
   }
 
